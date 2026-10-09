@@ -1,0 +1,1659 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## DIÁRIOS DA JUSTIÇA · DJEN x ERP\nRoda todo dia às 05:00 e entrega à equipe só as publicações que precisam de atenção.\n\nA · base de processos do ERP -> Supabase\nB · publicações do dia pela API do DJEN\nC · cruzamento DJEN x publicações captadas pelo ERP\nD · conferência na base completa + relatório por e-mail\n\nEntradas externas (e-mails do ERP) têm retentativa a cada 20 min e alerta no WhatsApp se o prazo estourar.",
+        "height": 260,
+        "width": 460,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -32
+      ],
+      "id": "b7817252-54c8-4cd9-9893-a7a176fe0d61",
+      "name": "Nota Geral"
+    },
+    {
+      "parameters": {
+        "content": "## SEÇÃO A\nERP -> Supabase\n(todos os dias, com retentativa até 09h)",
+        "height": 200,
+        "width": 380,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        352,
+        848
+      ],
+      "id": "dd2e44b4-b371-400a-9903-6b3f4b2bc399",
+      "name": "Nota Seção A"
+    },
+    {
+      "parameters": {
+        "content": "## SEÇÃO B\nAPI do DJEN -> dados em memória\n(todos os dias, sem retentativa — chamada direta à API)",
+        "height": 200,
+        "width": 380,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        352,
+        400
+      ],
+      "id": "ca8ece02-4c97-443f-a049-144754888e2a",
+      "name": "Nota Seção B"
+    },
+    {
+      "parameters": {
+        "content": "## SEÇÃO C\nPublicações DJEN x ERP\n(só dias úteis; segunda-feira busca o e-mail de sexta; retentativa até 10h)",
+        "height": 200,
+        "width": 380,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        352,
+        1328
+      ],
+      "id": "d8181209-a39a-4e39-bee2-5fc2cb2b8690",
+      "name": "Nota Seção C"
+    },
+    {
+      "parameters": {
+        "content": "## SEÇÃO D\nComparação final x Supabase completo\n+ envio do relatório único ao final\n(só roda se a Seção C gerou resultado)",
+        "height": 200,
+        "width": 380,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3392,
+        848
+      ],
+      "id": "aa971c1e-ac81-4459-bcf6-772006a7209b",
+      "name": "Nota Seção D"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -112,
+        608
+      ],
+      "id": "3cbeb1fc-ab8e-4ba2-900a-11dcc522c993",
+      "name": "Schedule Trigger 05:00"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dow-1",
+              "name": "Day of week",
+              "value": "={{ $now.setZone('America/Sao_Paulo').weekdayLong }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        128,
+        608
+      ],
+      "id": "efeef7c1-78bf-481b-af06-323f5f2760f0",
+      "name": "Definir Dia da Semana"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 2,
+        "output": "raw",
+        "filtersUI": {
+          "values": {
+            "filterBy": "search",
+            "search": "no-reply@erp.exemplo.com"
+          }
+        },
+        "options": {
+          "attachmentsPrefix": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        368,
+        944
+      ],
+      "id": "f66171d4-72a5-4ec9-aae9-e3eb27b366cb",
+      "name": "Buscar Email Base ERP",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "name": "Outlook"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a2-c1",
+              "leftValue": "={{ $('Buscar Email Base ERP').item.json.from.emailAddress.address }}",
+              "rightValue": "no-reply@erp.exemplo.com",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "a2-c2",
+              "leftValue": "={{ $('Buscar Email Base ERP').item.json.receivedDateTime.split('T')[0] }}",
+              "rightValue": "={{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "a2-c3",
+              "leftValue": "={{ $('Buscar Email Base ERP').item.binary.attachment_0.fileName }}",
+              "rightValue": "ATUALIZAÇÃO BASE ERP",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        944
+      ],
+      "id": "db02a9eb-e6a1-4806-88bf-e1b5a9e24f04",
+      "name": "If Email Base Encontrado"
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "attachment_0"
+      },
+      "type": "n8n-nodes-base.compression",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        864
+      ],
+      "id": "73523924-ee88-4499-8b2e-2c67910f6b03",
+      "name": "Compression"
+    },
+    {
+      "parameters": {
+        "operation": "extractHtmlContent",
+        "sourceData": "binary",
+        "dataPropertyName": "file_0",
+        "extractionValues": {
+          "values": [
+            {
+              "key": "linhas",
+              "cssSelector": "table.html-report-grid tbody tr",
+              "returnValue": "html",
+              "returnArray": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.html",
+      "typeVersion": 1.2,
+      "position": [
+        1152,
+        864
+      ],
+      "id": "6c48ede0-56d2-461d-b178-354e2fa582f3",
+      "name": "HTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =============================================================================\n// Nó Code (Run Once for All Items) — colocar LOGO APÓS o nó \"Extract HTML Content\"\n// Entrada esperada: o HTML extraiu as linhas <tr> como array de strings.\n//   - Se você usou Key=\"linhas\" + Return Array, os valores estão em\n//     item.json.linhas (array de strings \"<td>..</td>..\").\n//   - Ajuste a linha CAMPO_LINHAS abaixo se o nome da sua key for outro.\n// Saída: um item por processo, com as 26 colunas no formato do banco.\n// =============================================================================\n\nconst CAMPO_LINHAS = 'linhas'; // <- nome da Key configurada no nó HTML\n\n// Ordem das colunas no HTML. A 1a (\"Id\") é descartada (nao existe no banco).\n// \"Outro Número\" (HTML) sera renomeado para \"outroNumero\" (banco).\nconst COLS = [\"Id\",\"Pasta\",\"Tipo de processo\",\"Classe\",\"Cliente\",\"Posição\",\n  \"Grupo do Cliente\",\"Parte contrária\",\"Número do Processo\",\"Outro Número\",\n  \"Natureza\",\"Tipo de Ação\",\"Cidade\",\"UF\",\"Órgão\",\"Data da distribuição\",\n  \"Valor da Causa\",\"Valor envolvido (contingência)\",\"Valor da Condenação/Acordo\",\n  \"Análise de Risco\",\"Advogado Responsável\",\"Etiquetas\",\"Escritório responsável\",\n  \"Data do cadastro\",\"Data do encerramento\",\"Data da baixa\",\"Status\"];\n\nconst DATAS = new Set([\n  \"Data da distribuição\",\"Data do cadastro\",\"Data do encerramento\",\"Data da baixa\"\n]);\n\nfunction decodeEntities(s){\n  return s.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')\n          .replace(/&quot;/g,'\"').replace(/&#39;/g,\"'\").replace(/&nbsp;/g,' ')\n          .replace(/&#(\\d+);/g, (_,n)=>String.fromCharCode(parseInt(n,10)));\n}\nfunction limpa(s){\n  const t = decodeEntities(String(s ?? '')).replace(/\\s+/g,' ').trim();\n  return t === '' ? null : t;\n}\nfunction dataBR(s){\n  if(!s) return null;\n  const m = s.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})/);  // dd/mm/yyyy [hh:mm:ss]\n  return m ? `${m[3]}-${m[2]}-${m[1]}` : s;          // -> yyyy-mm-dd\n}\nfunction parseLinha(html){\n  const celulas = [...html.matchAll(/<td[^>]*>([\\s\\S]*?)<\\/td>/g)].map(m => m[1]);\n  // Linha valida tem 27 celulas. Se vier diferente, marca para inspecao.\n  const obj = {};\n  COLS.forEach((col, i) => {\n    if (col === \"Id\") return;            // descarta a coluna Id\n    let v = limpa(celulas[i] ?? '');\n    if (DATAS.has(col)) v = dataBR(v);\n    const chave = (col === \"Outro Número\") ? \"outroNumero\" : col;\n    obj[chave] = v;\n  });\n  return { obj, n: celulas.length };\n}\n\n// ---- coleta as strings de linha de todos os itens de entrada ----\nlet linhas = [];\nfor (const item of $input.all()) {\n  const v = item.json[CAMPO_LINHAS];\n  if (Array.isArray(v)) linhas = linhas.concat(v);\n  else if (typeof v === 'string') linhas.push(v);\n}\n\nconst saida = [];\nlet semPasta = 0, malformadas = 0;\nfor (const html of linhas) {\n  if (typeof html !== 'string' || !/<td/i.test(html)) continue;\n  const { obj, n } = parseLinha(html);\n  if (n !== 27) malformadas++;           // conta linhas fora do padrao\n  if (!obj.Pasta) { semPasta++; continue; } // Pasta e PK NOT NULL -> pula\n  saida.push({ json: obj });\n}\n\nreturn saida;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        864
+      ],
+      "id": "687fcd1b-0f3f-403d-8950-c47bbaf06cf7",
+      "name": "Parse Base ERP"
+    },
+    {
+      "parameters": {
+        "batchSize": 500,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1664,
+        864
+      ],
+      "id": "c7882c28-046a-41b2-a9e1-8c3301af5b4d",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list",
+          "cachedResultName": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "base_erp",
+          "mode": "list",
+          "cachedResultName": "base_erp"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Pasta": "={{ $json.Pasta }}",
+            "Tipo de processo": "={{ $json['Tipo de processo'] }}",
+            "Classe": "={{ $json.Classe }}",
+            "Cliente": "={{ $json.Cliente }}",
+            "Posição": "={{ $json['Posição'] }}",
+            "Grupo do Cliente": "={{ $json['Grupo do Cliente'] }}",
+            "Parte contrária": "={{ $json['Parte contrária'] }}",
+            "Número do Processo": "={{ $json['Número do Processo'] }}",
+            "outroNumero": "={{ $json['Outro Número'] }}",
+            "Natureza": "={{ $json.Natureza }}",
+            "Tipo de Ação": "={{ $json['Tipo de Ação'] }}",
+            "Cidade": "={{ $json.Cidade }}",
+            "UF": "={{ $json.UF }}",
+            "Órgão": "={{ $json['Órgão'] }}",
+            "Data da distribuição": "={{ $json['Data da distribuição'] }}",
+            "Valor da Causa": "={{ $json['Valor da Causa'] }}",
+            "Valor envolvido (contingência)": "={{ $json['Valor envolvido (contingência)'] }}",
+            "Valor da Condenação/Acordo": "={{ $json['Valor da Condenação/Acordo'] }}",
+            "Análise de Risco": "={{ $json['Análise de Risco'] }}",
+            "Advogado Responsável": "={{ $json['Advogado Responsável'] }}",
+            "Etiquetas": "={{ $json.Etiquetas }}",
+            "Escritório responsável": "={{ $json['Escritório responsável'] }}",
+            "Data do cadastro": "={{ $json['Data do cadastro'] }}",
+            "Data do encerramento": "={{ $json['Data do encerramento'] }}",
+            "Data da baixa": "={{ $json['Data da baixa'] }}",
+            "Status": "={{ $json.Status }}"
+          },
+          "matchingColumns": [
+            "Pasta"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1920,
+        944
+      ],
+      "id": "3523a85e-963f-4cee-9df1-bfd891c7270c",
+      "name": "Upsert Supabase",
+      "credentials": {
+        "postgres": {
+          "name": "Postgres (Supabase)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "SUA_INSTANCIA",
+        "remoteJid": "SEU_GRUPO@g.us",
+        "messageText": "=BASE DO ERP UPADA PARA O SUPABASE COM SUCESSO!!!",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        1920,
+        752
+      ],
+      "id": "7345a527-8fec-4a2c-84eb-d9bbdfe16949",
+      "name": "WhatsApp Base OK",
+      "credentials": {
+        "evolutionApi": {
+          "name": "Evolution API (WhatsApp)"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a9-c1",
+              "leftValue": "={{ $now.setZone('America/Sao_Paulo').hour }}",
+              "rightValue": 9,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        1152
+      ],
+      "id": "a71602ae-35d0-4489-85a8-692c85747ae1",
+      "name": "Ainda Dentro do Prazo (Base ERP)"
+    },
+    {
+      "parameters": {
+        "amount": 20,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1152,
+        1088
+      ],
+      "id": "b9a9315c-882f-4faa-b900-d8bea2fe762a",
+      "name": "Aguardar 20min (Base ERP)"
+    },
+    {
+      "parameters": {
+        "resource": "messages-api",
+        "instanceName": "SUA_INSTANCIA",
+        "remoteJid": "SEU_GRUPO@g.us",
+        "messageText": "=ATENÇÃO: e-mail da base do ERP não chegou até as 09h. Verificar manualmente.",
+        "options_message": {}
+      },
+      "type": "n8n-nodes-evolution-api.evolutionApi",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        1248
+      ],
+      "id": "92b3f115-e2e8-47f2-b46f-fe6e162d94f2",
+      "name": "Alerta Base ERP Atrasada",
+      "credentials": {
+        "evolutionApi": {
+          "name": "Evolution API (WhatsApp)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Datas no formato dd/mm/aaaa usado pela API de publicações\nconst hoje = new Date();\nconst dia = String(hoje.getDate()).padStart(2, '0');\nconst mes = String(hoje.getMonth() + 1).padStart(2, '0');\nconst ano = hoje.getFullYear();\nconst dataHoje = `${dia}/${mes}/${ano}`;\n\n// Logins de consulta vêm de variáveis de ambiente (DJEN_LOGIN_1, DJEN_SENHA_1, ...).\n// Nunca deixe credenciais escritas no código do workflow.\nconst logins = [];\nfor (let i = 1; i <= 10; i++) {\n  const login = $env[`DJEN_LOGIN_${i}`];\n  const senha = $env[`DJEN_SENHA_${i}`];\n  if (login && senha) logins.push({ login, senha });\n}\nif (logins.length === 0) throw new Error('Nenhum login configurado (DJEN_LOGIN_1 / DJEN_SENHA_1)');\n\nreturn logins.map(l => ({ json: { ...l, dataHoje, publicacoes: [] } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        464
+      ],
+      "id": "238fad8b-1986-40bd-b3ae-7d75d15dbd9e",
+      "name": "Inicializar Logins"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const https = require('https');\nconst item  = $input.item.json;\nconst login = item.login;\nconst senha = item.senha;\n\nconst BASE  = $env.DJEN_API_HOST;\nconst PATH  = '/api/publicacoes';\nconst token = Buffer.from(`${login}:${senha}`).toString('base64');\n\nfunction requisicao(options, body) {\n  return new Promise((resolve, reject) => {\n    const req = https.request(options, res => {\n      let data = '';\n      res.on('data', chunk => data += chunk);\n      res.on('end', () => {\n        try { resolve(JSON.parse(data)); }\n        catch(e) { resolve([]); }\n      });\n    });\n    req.on('error', reject);\n    if (body) req.write(body);\n    req.end();\n  });\n}\n\nlet totalConsumido = 0;\n\nwhile (true) {\n  const lote = await requisicao({\n    host:   BASE,\n    path:   `${PATH}/ConsultarPublicacoes`,\n    method: 'GET',\n    headers: {\n      'Authorization': `Basic ${token}`,\n      'Content-Type':  'application/json',\n    },\n  });\n\n  const dados = Array.isArray(lote) ? lote : [];\n  if (dados.length === 0) break;\n\n  totalConsumido += dados.length;\n\n  const payload = JSON.stringify(dados.map(p => ({\n    IdProcesso:          p.IdProcesso,\n    CodigoTermoPesquisa: p.CodigoTermoPesquisa,\n    CodigoDiario:        p.CodigoDiario,\n    CodigoDivisaoDiario: p.CodigoDivisaoDiario,\n    DataDiario:          p.DataDiario,\n  })));\n\n  await requisicao({\n    host:   BASE,\n    path:   `${PATH}/ConfirmarPublicacoes`,\n    method: 'POST',\n    headers: {\n      'Authorization':  `Basic ${token}`,\n      'Content-Type':   'application/json',\n      'Content-Length': Buffer.byteLength(payload),\n    },\n  }, payload);\n\n  if (dados.length < 50) break;\n}\n\nreturn { json: { ...item, filaConsumida: totalConsumido } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        464
+      ],
+      "id": "6a3b149b-9998-4a95-a713-c86c2f482421",
+      "name": "Esvaziar Fila"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const https = require('https');\nconst item  = $input.item.json;\nconst login = item.login;\nconst senha = item.senha;\nconst data  = item.dataHoje;\n\nconst BASE  = $env.DJEN_API_HOST;\nconst PATH  = '/api/publicacoes';\nconst token = Buffer.from(`${login}:${senha}`).toString('base64');\n\nfunction requisicao(options) {\n  return new Promise((resolve, reject) => {\n    const req = https.request(options, res => {\n      let raw = '';\n      res.on('data', chunk => raw += chunk);\n      res.on('end', () => {\n        try { resolve(JSON.parse(raw)); }\n        catch(e) { resolve([]); }\n      });\n    });\n    req.on('error', reject);\n    req.end();\n  });\n}\n\nconst dataEnc = encodeURIComponent(data);\nconst dados = await requisicao({\n  host:   BASE,\n  path:   `${PATH}/ConsultarPublicacoesPersonalizado?data=${dataEnc}`,\n  method: 'GET',\n  headers: {\n    'Authorization': `Basic ${token}`,\n    'Content-Type':  'application/json',\n  },\n});\n\nconst publicacoes = (Array.isArray(dados) ? dados : []).map(p => ({\n  login,\n  n_recorte:       p.N_RECORTE,\n  processo:        p.NUMERO_PROCESSO,\n  nome_pesquisado: p.NOME_PESQUISADO,\n  orgao_tribunal:  p.ORGAO_TRIBUNAL,\n  juizo:           p.JUIZO_SECRETARIA,\n  jornal:          p.JORNAL,\n  estado:          p.ESTADO,\n  pagina:          p.PAGINA,\n  data_publicacao: p.DATA_PUBLICACAO,\n  data_divulgacao: p.DATA_DIVULGACAO,\n  autor:           p.AUTOR,\n  reu:             p.REU,\n  texto:           p.PUBLICACAO,\n}));\n\nreturn { json: { ...item, publicacoes, total: publicacoes.length } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        464
+      ],
+      "id": "af43db78-4f1f-4f18-b4a1-454c8238cdb1",
+      "name": "Buscar Histórico do Dia"
+    },
+    {
+      "parameters": {
+        "jsCode": "const itens = $input.all();\n\nconst todasPublicacoes = [];\nconst resumo = [];\n\nfor (const item of itens) {\n  const pubs = item.json.publicacoes || [];\n  todasPublicacoes.push(...pubs);\n  resumo.push({\n    login:       item.json.login,\n    encontradas: item.json.total || 0,\n  });\n}\n\nconst dataHoje   = itens[0]?.json?.dataHoje || '';\nconst totalGeral = todasPublicacoes.length;\n\nreturn [{ json: { dataHoje, resumo, todasPublicacoes, totalGeral } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        464
+      ],
+      "id": "42dc0499-4bcf-4349-b2c5-b0566257abc0",
+      "name": "Consolidar Resultados"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "todasPublicacoes",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        464
+      ],
+      "id": "f3990900-08f4-43ab-83ba-0859ed7348d8",
+      "name": "Split Out"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const p = $input.item.json;\n\nreturn {\n  json: {\n    'Login':           p.login          || '',\n    'Processo':        p.processo        || '',\n    'Nome Pesquisado': p.nome_pesquisado || '',\n    'Estado':          p.estado          || '',\n    'Data Publicacao': p.data_publicacao || '',\n    'Data Divulgacao': p.data_divulgacao || '',\n    'Texto':           p.texto ? String(p.texto).substring(0, 32000) : '',\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        464
+      ],
+      "id": "864854b7-7507-4e40-97da-3c4e9f4cf355",
+      "name": "Preparar Colunas"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c1-c1",
+              "leftValue": "={{ $json['Day of week'] }}",
+              "rightValue": "Saturday",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c1-c2",
+              "leftValue": "={{ $json['Day of week'] }}",
+              "rightValue": "Sunday",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        368,
+        1424
+      ],
+      "id": "41a399cb-9330-4cbb-a9d4-fc25592fa522",
+      "name": "Verificar Fim de Semana"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        624,
+        1504
+      ],
+      "id": "15720fc6-a416-4fee-ae10-861c0e6c0f86",
+      "name": "Sem Publicação (Fim de Semana)"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c2-c1",
+              "leftValue": "={{ $json['Day of week'] }}",
+              "rightValue": "Monday",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        1360
+      ],
+      "id": "f133413a-8d5e-4fb8-a00c-c2167adb0132",
+      "name": "Verificar Segunda-feira"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 3,
+        "output": "raw",
+        "filtersUI": {
+          "values": {
+            "filterBy": "search",
+            "search": "no-reply@erp.exemplo.com"
+          }
+        },
+        "options": {
+          "attachmentsPrefix": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        880,
+        1280
+      ],
+      "id": "0e50e0f3-5cba-4483-96a7-78708d6f31c1",
+      "name": "Buscar Email Publicações SEXTA",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "name": "Outlook"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c4-c1",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "PUBLICACOES N8N - SEXTA",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "c4-c2",
+              "leftValue": "={{ $json.receivedDateTime.toDateTime().format('yyyy-MM-dd') }}",
+              "rightValue": "={{ $now.setZone('America/Sao_Paulo').minus({ days: 2 }).toFormat('yyyy-MM-dd') }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1152,
+        1280
+      ],
+      "id": "455e6157-b9ac-4716-94f0-aa3940222b98",
+      "name": "If Publicação SEXTA Encontrada"
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "binaryPropertyName": "attachment_0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1408,
+        1232
+      ],
+      "id": "7f7f7bdb-d46e-4b1a-a318-3cc7cd26ddff",
+      "name": "Extract from File SEXTA"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const vals = Object.values(item.json);\n  return {\n    json: {\n      _numeroProcesso: String(vals[5] ?? '').trim(),\n      _origem: 'supabase'\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        1232
+      ],
+      "id": "18897a0d-ae3b-49de-b3a3-64fe5edb39e7",
+      "name": "Tag Supabase SEXTA"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cutoff-sexta",
+              "leftValue": "={{ $now.setZone('America/Sao_Paulo').hour }}",
+              "rightValue": 10,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1152,
+        1424
+      ],
+      "id": "2f34c3ce-fd0c-4a9b-a97a-a998297d36e4",
+      "name": "Ainda Dentro do Prazo (SEXTA)"
+    },
+    {
+      "parameters": {
+        "amount": 20,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        1488
+      ],
+      "id": "eaebf2cc-be7d-4b91-ace7-e6e9bf560a42",
+      "name": "Aguardar 20min (SEXTA)"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 5,
+        "output": "raw",
+        "filtersUI": {
+          "values": {
+            "filterBy": "search",
+            "search": "no-reply@erp.exemplo.com"
+          }
+        },
+        "options": {
+          "attachmentsPrefix": "attachment_",
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        880,
+        1648
+      ],
+      "id": "bb8ee587-549a-40bd-8258-bc2018cf923d",
+      "name": "Buscar Email Publicações Hoje",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "name": "Outlook"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c7-c1",
+              "leftValue": "={{ $json.subject }}",
+              "rightValue": "PUBLICACOES N8N",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "c7-c2",
+              "leftValue": "={{ $json.receivedDateTime.toDateTime().format('yyyy-MM-dd') }}",
+              "rightValue": "={{ $now.setZone('America/Sao_Paulo').toFormat('yyyy-MM-dd') }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1152,
+        1648
+      ],
+      "id": "5db9784f-8729-452c-b134-a21c05eba2cd",
+      "name": "If Publicação Hoje Encontrada"
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "binaryPropertyName": "attachment_0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1408,
+        1584
+      ],
+      "id": "1d1f0e00-9f83-4a4d-b224-3a252b3774bc",
+      "name": "Extract from File Hoje"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const vals = Object.values(item.json);\n  return {\n    json: {\n      _numeroProcesso: String(vals[5] ?? '').trim(),\n      _origem: 'supabase'\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1664,
+        1584
+      ],
+      "id": "78f9246e-4f15-4149-af05-61a118511f42",
+      "name": "Tag Supabase Hoje"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cutoff-hoje",
+              "leftValue": "={{ $now.setZone('America/Sao_Paulo').hour }}",
+              "rightValue": 10,
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1152,
+        1792
+      ],
+      "id": "e6c44406-4e80-4c25-81cf-ea03c64a9f10",
+      "name": "Ainda Dentro do Prazo (Hoje)"
+    },
+    {
+      "parameters": {
+        "amount": 20,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        880,
+        1840
+      ],
+      "id": "99de2986-0f05-48b8-9520-c89060dd30d9",
+      "name": "Aguardar 20min (Hoje)"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => ({\n  json: { ...item.json, _origem: 'djen' }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1920,
+        1424
+      ],
+      "id": "0593e01e-ca3c-4a6d-b5e3-0f0f8762a156",
+      "name": "Tag DJEN"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        2192,
+        1424
+      ],
+      "id": "22351b39-9a32-4f92-ac09-6bd219239e5f",
+      "name": "Merge Publicações"
+    },
+    {
+      "parameters": {
+        "jsCode": "const todos = $input.all();\n\nconst djenItems = todos.filter(i => i.json._origem === 'djen');\nconst supabaseItems = todos.filter(i => i.json._origem === 'supabase');\n\nif (supabaseItems.length === 0) throw new Error('Item do Supabase não encontrado — verifique se o email do dia foi recebido');\nif (djenItems.length === 0) throw new Error('Item do DJEN não encontrado — verifique se o email do dia foi recebido');\n\nconst numerosSupabase = new Set(\n  supabaseItems.map(i => String(i.json._numeroProcesso ?? '').trim()).filter(Boolean)\n);\n\nconst resultado = djenItems.filter(item => {\n  const valsLimpos = Object.entries(item.json)\n    .filter(([k]) => k !== '_origem')\n    .map(([, v]) => v);\n  const colB = String(valsLimpos[1] ?? '').trim();\n  return colB && !numerosSupabase.has(colB);\n});\n\nif (resultado.length === 0) {\n  throw new Error('Nenhum processo sem correspondência encontrado');\n}\n\nreturn resultado.map(item => {\n  const { _origem, ...resto } = item.json;\n  return { json: resto };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2448,
+        1424
+      ],
+      "id": "cd2f83d9-5877-426d-aed3-f85dce8012ad",
+      "name": "Compara e Filtra Publicações"
+    },
+    {
+      "parameters": {
+        "jsCode": "const TRIBUNAL_PREFIXES = [\n  'TJDFT', // Tribunal de Justiça do DF (caso especial, checar antes do TJ genérico)\n  'STJ',\n  'STF',\n  'TST',\n  'TSE',\n  'STM',\n  'TRF',\n  'TRT',\n  'TRE',\n  'TJM',   // Tribunal de Justiça Militar (checar antes do TJ genérico)\n  'TJ',\n  'CNJ'\n];\n\nfunction extractTribunal(valor) {\n  if (!valor) return 'OUTROS';\n  const str = String(valor).toUpperCase();\n\n  for (const prefixo of TRIBUNAL_PREFIXES) {\n    const regex = new RegExp('(^|[^A-Z])' + prefixo);\n    if (regex.test(str)) {\n      return prefixo;\n    }\n  }\n\n  return 'OUTROS'; // não identificado\n}\n\nconst JORNAL_FIELD = 'Jornal'; // ajuste se o nome real da coluna for diferente\n\nreturn $input.all().map(item => {\n  const tribunal = extractTribunal(item.json[JORNAL_FIELD]);\n  return {\n    json: {\n      Tribunal: tribunal,\n      ...item.json\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        1424
+      ],
+      "id": "a6cdd24e-5a2f-4771-8bc2-6867d7a34b9f",
+      "name": "Adicionar Coluna Tribunal"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "base_erp",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2192,
+        944
+      ],
+      "id": "24befb19-a18c-481d-94df-bd1e1673c0e9",
+      "name": "Consultar Supabase Completo",
+      "credentials": {
+        "supabaseApi": {
+          "name": "Supabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d2-1",
+              "name": "Pasta",
+              "value": "={{ $json.Pasta }}",
+              "type": "string"
+            },
+            {
+              "id": "d2-2",
+              "name": "Número do Processo",
+              "value": "={{ $json['Número do Processo'] }}",
+              "type": "string"
+            },
+            {
+              "id": "d2-3",
+              "name": "outroNumero",
+              "value": "={{ $json.outroNumero }}",
+              "type": "string"
+            },
+            {
+              "id": "d2-4",
+              "name": "Status",
+              "value": "={{ $json.Status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2448,
+        944
+      ],
+      "id": "bfc5b029-bd4c-4d21-a97b-6dfb47ebbc00",
+      "name": "Padronizar Campos Supabase"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const vals = Object.values(item.json);\n  return {\n    json: {\n      _numeroProcesso: String(vals[5] ?? '').trim(),\n      _pasta: String(item.json['Pasta'] ?? '').trim(),\n      _status: String(item.json['Status'] ?? '').trim(),\n      _tipo: String(item.json['Tipo de processo'] ?? '').trim(),\n      _origem: 'supabase'\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        944
+      ],
+      "id": "b1b4007f-1291-46e4-b8b5-1aa01e83688e",
+      "name": "Tag Supabase Final"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => ({\n  json: {\n    ...item.json,\n    _origem: 'djen',\n    _isTST: String(item.json['Jornal'] ?? '').toUpperCase().includes('TST')\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2960,
+        1424
+      ],
+      "id": "68d53dab-565f-4856-8448-7c6f9e324c10",
+      "name": "Tag DJEN Final"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        3232,
+        1184
+      ],
+      "id": "23b885d5-b7f5-4ecc-b4c8-96d02c15e10d",
+      "name": "Merge Final"
+    },
+    {
+      "parameters": {
+        "jsCode": "const todos = $input.all();\n\nconst djenItems   = todos.filter(i => i.json._origem === 'djen');\nconst supabaseItems = todos.filter(i => i.json._origem === 'supabase');\n\nif (supabaseItems.length === 0) throw new Error('Item do Supabase não encontrado');\nif (djenItems.length   === 0) throw new Error('Item do DJEN não encontrado');\n\n// Chave composta: número do processo + instância (TST ou originário)\nconst chave = (numero, isTST) => `${numero}|${isTST ? 'TST' : 'ORIGINARIO'}`;\n\n// Processos baixados (não devem aparecer no relatório final)\nconst numerosBaixados = new Set(\n  supabaseItems\n    .filter(i => i.json._status === 'Baixado')\n    .map(i => chave(i.json._numeroProcesso, i.json._tipo === 'Recurso'))\n    .filter(Boolean)\n);\n\n// Mapa (processo + instância) -> Pasta\nconst pastaPorProcesso = new Map();\nfor (const i of supabaseItems) {\n  if (i.json._numeroProcesso) {\n    const isTST = i.json._tipo === 'Recurso';\n    pastaPorProcesso.set(chave(i.json._numeroProcesso, isTST), i.json._pasta || '');\n  }\n}\n\nconsole.log('Total DJEN:', djenItems.length);\nconsole.log('Total Supabase (Baixado):', numerosBaixados.size);\nconsole.log('Total Supabase (cadastrados):', pastaPorProcesso.size);\n\n// Mantém apenas processos do DJEN que NÃO aparecem como Baixado (na mesma instância) no Supabase\nconst resultado = djenItems.filter(item => {\n  const processo = String(item.json['Processo'] ?? '').trim();\n  if (!processo) return false;\n  return !numerosBaixados.has(chave(processo, item.json._isTST));\n});\n\nconsole.log('Sem correspondência (antes de remover duplicatas):', resultado.length);\n\nif (resultado.length === 0) throw new Error('Nenhum processo sem correspondência encontrado');\n\n// Remove duplicatas por processo + instância\nconst vistos = new Set();\nconst semDuplicatas = resultado.filter(item => {\n  const processo = String(item.json['Processo'] ?? '').trim();\n  const k = chave(processo, item.json._isTST);\n  if (vistos.has(k)) return false;\n  vistos.add(k);\n  return true;\n});\n\nconsole.log('Total final (sem duplicatas):', semDuplicatas.length);\n\nreturn semDuplicatas.map(item => {\n  const { _origem, _isTST, ...resto } = item.json;\n  const processo = String(item.json['Processo'] ?? '').trim();\n  const pasta = pastaPorProcesso.get(chave(processo, item.json._isTST));\n  return {\n    json: {\n      ...resto,\n      Pasta: pasta || 'SEM CADASTRO'\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3488,
+        1184
+      ],
+      "id": "3782e8d8-40d2-4679-8aae-41580cee0869",
+      "name": "Compara e Filtra Final"
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        3728,
+        1184
+      ],
+      "id": "8788ddcb-d1b4-4488-abd4-1f845c4acc55",
+      "name": "Convert to File Final"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.item;\nitem.binary.data.fileName = 'processos_nao_encontrados.xlsx';\nreturn item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3968,
+        1184
+      ],
+      "id": "f3964657-35e2-4d46-8941-83a0240910e3",
+      "name": "Renomear Arquivo Final"
+    },
+    {
+      "parameters": {
+        "toRecipients": "equipe@exemplo.com",
+        "subject": "DJEN - PLANILHA FINAL",
+        "bodyContent": "=Processos DJEN x ERP. \nData da publicação: {{ $now.format('dd/MM/yyyy') }}\n",
+        "additionalFields": {
+          "attachments": {
+            "attachments": [
+              {
+                "binaryPropertyName": "data"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.microsoftOutlook",
+      "typeVersion": 2,
+      "position": [
+        4208,
+        1184
+      ],
+      "id": "4ef0199f-6ccf-425d-bebe-9f37958a1ccc",
+      "name": "Enviar Relatório Final",
+      "credentials": {
+        "microsoftOutlookOAuth2Api": {
+          "name": "Outlook"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger 05:00": {
+      "main": [
+        [
+          {
+            "node": "Definir Dia da Semana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Definir Dia da Semana": {
+      "main": [
+        [
+          {
+            "node": "Buscar Email Base ERP",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Inicializar Logins",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Verificar Fim de Semana",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Email Base ERP": {
+      "main": [
+        [
+          {
+            "node": "If Email Base Encontrado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Email Base Encontrado": {
+      "main": [
+        [
+          {
+            "node": "Compression",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ainda Dentro do Prazo (Base ERP)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compression": {
+      "main": [
+        [
+          {
+            "node": "HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML": {
+      "main": [
+        [
+          {
+            "node": "Parse Base ERP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Base ERP": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "WhatsApp Base OK",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Upsert Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Supabase": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Base OK": {
+      "main": [
+        [
+          {
+            "node": "Consultar Supabase Completo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ainda Dentro do Prazo (Base ERP)": {
+      "main": [
+        [
+          {
+            "node": "Aguardar 20min (Base ERP)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Alerta Base ERP Atrasada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aguardar 20min (Base ERP)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Email Base ERP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Inicializar Logins": {
+      "main": [
+        [
+          {
+            "node": "Esvaziar Fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Esvaziar Fila": {
+      "main": [
+        [
+          {
+            "node": "Buscar Histórico do Dia",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Histórico do Dia": {
+      "main": [
+        [
+          {
+            "node": "Consolidar Resultados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consolidar Resultados": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Preparar Colunas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Colunas": {
+      "main": [
+        [
+          {
+            "node": "Tag DJEN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Fim de Semana": {
+      "main": [
+        [
+          {
+            "node": "Sem Publicação (Fim de Semana)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Verificar Segunda-feira",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Segunda-feira": {
+      "main": [
+        [
+          {
+            "node": "Buscar Email Publicações SEXTA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Buscar Email Publicações Hoje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Email Publicações SEXTA": {
+      "main": [
+        [
+          {
+            "node": "If Publicação SEXTA Encontrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Publicação SEXTA Encontrada": {
+      "main": [
+        [
+          {
+            "node": "Extract from File SEXTA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ainda Dentro do Prazo (SEXTA)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File SEXTA": {
+      "main": [
+        [
+          {
+            "node": "Tag Supabase SEXTA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag Supabase SEXTA": {
+      "main": [
+        [
+          {
+            "node": "Merge Publicações",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Ainda Dentro do Prazo (SEXTA)": {
+      "main": [
+        [
+          {
+            "node": "Aguardar 20min (SEXTA)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Aguardar 20min (SEXTA)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Email Publicações SEXTA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Email Publicações Hoje": {
+      "main": [
+        [
+          {
+            "node": "If Publicação Hoje Encontrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Publicação Hoje Encontrada": {
+      "main": [
+        [
+          {
+            "node": "Extract from File Hoje",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ainda Dentro do Prazo (Hoje)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File Hoje": {
+      "main": [
+        [
+          {
+            "node": "Tag Supabase Hoje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag Supabase Hoje": {
+      "main": [
+        [
+          {
+            "node": "Merge Publicações",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Ainda Dentro do Prazo (Hoje)": {
+      "main": [
+        [
+          {
+            "node": "Aguardar 20min (Hoje)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Aguardar 20min (Hoje)": {
+      "main": [
+        [
+          {
+            "node": "Buscar Email Publicações Hoje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag DJEN": {
+      "main": [
+        [
+          {
+            "node": "Merge Publicações",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Publicações": {
+      "main": [
+        [
+          {
+            "node": "Compara e Filtra Publicações",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compara e Filtra Publicações": {
+      "main": [
+        [
+          {
+            "node": "Adicionar Coluna Tribunal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adicionar Coluna Tribunal": {
+      "main": [
+        [
+          {
+            "node": "Tag DJEN Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Supabase Completo": {
+      "main": [
+        [
+          {
+            "node": "Padronizar Campos Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Padronizar Campos Supabase": {
+      "main": [
+        [
+          {
+            "node": "Tag Supabase Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag Supabase Final": {
+      "main": [
+        [
+          {
+            "node": "Merge Final",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Tag DJEN Final": {
+      "main": [
+        [
+          {
+            "node": "Merge Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Final": {
+      "main": [
+        [
+          {
+            "node": "Compara e Filtra Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compara e Filtra Final": {
+      "main": [
+        [
+          {
+            "node": "Convert to File Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File Final": {
+      "main": [
+        [
+          {
+            "node": "Renomear Arquivo Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Renomear Arquivo Final": {
+      "main": [
+        [
+          {
+            "node": "Enviar Relatório Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {}
+}

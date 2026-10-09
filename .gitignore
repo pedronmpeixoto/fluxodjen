@@ -1,0 +1,4 @@
+.env
+*.xlsx
+.DS_Store
+Thumbs.db
